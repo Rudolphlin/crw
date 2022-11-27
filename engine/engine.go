@@ -1,52 +1,45 @@
 package engine
 
 import (
-	"fmt"
 	"net/http"
 )
 
-type HandlerFunc func(http.ResponseWriter, *http.Request)
+type HandlerFunc func(c *Context)
 
 type Engine struct {
-	router map[string]HandlerFunc
-}
-
-func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	key := req.Method + "-" + req.URL.Path
-	if handler, ok := e.router[key]; ok {
-		handler(w, req)
-	} else {
-		fmt.Fprintf(w, "404 NOT FOUND: %s\n", req.URL)
-	}
-
+	router *Router
 }
 
 // New is the constructor of gee.Engine
 func New() *Engine {
-	return &Engine{router: make(map[string]HandlerFunc)}
-}
-
-func (e *Engine) registRoute(method string, pattern string, handler HandlerFunc) {
-	key := method + "-" + pattern
-	e.router[key] = handler
+	return &Engine{router: newRouter()}
 }
 
 func (e *Engine) Run(port string) (err error) {
-	http.ListenAndServe("port", engine)
+	return http.ListenAndServe(port, e)
+}
+
+func (e *Engine) registRouter(method, pattern string, handler HandlerFunc) {
+	e.router.registRouter(method, pattern, handler)
+}
+
+func (e *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	c := newContext(w, req)
+	e.router.handle(c)
 }
 
 func (e *Engine) Get(pattern string, handler HandlerFunc) {
-	e.registRoute("GET", pattern, handler)
+	e.registRouter("GET", pattern, handler)
 }
 
 func (e *Engine) Post(pattern string, handler HandlerFunc) {
-	e.registRoute("POST", pattern, handler)
+	e.registRouter("POST", pattern, handler)
 }
 
 func (e *Engine) Put(pattern string, handler HandlerFunc) {
-	e.registRoute("PUT", pattern, handler)
+	e.registRouter("PUT", pattern, handler)
 }
 
 func (e *Engine) Delete(pattern string, handler HandlerFunc) {
-	e.registRoute("DEL", pattern, handler)
+	e.registRouter("DEL", pattern, handler)
 }
